@@ -69,10 +69,12 @@
   exports.isPluggable = isPluggable
 
   function signal(address, message) {
+    var hook = 'on' + address
+    message.type = address
     return Object.keys(plugged).
     map(function(id) { return plugged[id] }).
     map(function(plugin) {
-      return typeof(plugin[address]) === 'function' && plugin[address](message)
+      return typeof(plugin[hook]) === 'function' && plugin[hook](message)
     })
   }
   signal.meta = { description: 'signal all dependencies' }
@@ -106,18 +108,22 @@
     // If all dependencies are plugged in, then plug given one as well &
     // signal all plugins.
     plugged[id(plugin)] = plugin
-    signal('plugged', plugin)
+    signal('plug', {
+      plugin: plugin,
+      plugins: Object.keys(plugged).map(dependency)
+    })
   }
   plug.meta = { description: 'enables a given plugin' }
   exports.plug = plug
 
   function unplug(id) {
-    var result = false
-    if (!isPlugged(id)) {
+    var plugin, result = false
+    if (isPlugged(id)) {
+      plugin = plugged[id]
       // unplug all the dependent plugins.
-      dependents(plugged[id]).map(unplug)
+      dependents(plugin).map(unplug)
       // signal that plugin was unplugged.
-      signal('unplugged', plugged[id])
+      signal('unplug', { plugin: plugin })
       // remove plugin from registry.
       delete plugged[id]
       result = true
