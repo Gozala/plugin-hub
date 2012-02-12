@@ -1,0 +1,29 @@
+{
+  "name": "plugin-hub",
+  "id": "plugin-hub",
+  "version": "0.0.1",
+  "description": "plugin hub",
+  "keywords": [ "plugins", "plugin", "hub" ],
+  "author": "Irakli Gozalishvili <rfobic@gmail.com> (http://jeditoolkit.com)",
+  "homepage": "https://github.com/Gozala/plugin-hub",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Gozala/plugin-hub.git",
+    "web": "https://github.com/Gozala/plugin-hub"
+  },
+  "bugs": {
+    "url": "http://github.com/Gozala/plugin-hub/issues/"
+  },
+  "devDependencies": {
+    "test": ">=0.4.4",
+    "repl-utils": ">=1.0.0"
+  },
+  "scripts": {
+    "test": "node tests/test-all.js",
+    "repl": "node node_modules/repl-utils"
+  },
+  "licenses": [{
+    "type" : "MIT",
+    "url" : "http://jeditoolkit.com/LICENSE"
+  }]
+}
