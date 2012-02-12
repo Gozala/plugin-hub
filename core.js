@@ -9,7 +9,7 @@
   exports.stability = 'unstable'
 
   var installed = Object.create(null)
-  exports.istalled = installed
+  exports.installed = installed
 
   var plugged = Object.create(null)
   exports.plugged = plugged
@@ -94,24 +94,19 @@
   exports.uninstall = uninstall
 
   function plug(plugin) {
-    var plugged, result = false
     // If plugin is not installed, then install it first.
     if (!isInstalled(id(plugin))) install(plugin)
 
     // Goes through all dependencies and try to plug them in.
-    plugged = dependencies(plugin).forEach(function(id) {
-      return isInstalled(id) && plug(dependency(id))
+    dependencies(plugin).forEach(function(id) {
+      if (isInstalled(id)) plug(dependency(id))
+      else throw Error('Unmet dependency: ' + id)
     })
 
     // If all dependencies are plugged in, then plug given one as well &
     // signal all plugins.
-    if (plugged) {
-      plugged[id(plugin)] = plugin
-      signal('plug', plugin)
-      result = true
-    }
-
-    return result
+    plugged[id(plugin)] = plugin
+    signal('plugged', plugin)
   }
   plug.meta = { description: 'enables a given plugin' }
   exports.plug = plug
@@ -122,7 +117,7 @@
       // unplug all the dependent plugins.
       dependents(plugged[id]).map(unplug)
       // signal that plugin was unplugged.
-      signal('unplug', plugged[id])
+      signal('unplugged', plugged[id])
       // remove plugin from registry.
       delete plugged[id]
       result = true
