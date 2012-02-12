@@ -36,10 +36,10 @@
     **/
     return Object.keys(installed).
     map(dependency).
-    map(dependencies).
-    filter(function(dependencies) {
-      return ~dependencies.indexOf(plugin.id)
-    })
+    filter(function(dependency) {
+      return ~dependencies(dependency).indexOf(id(plugin))
+    }).
+    map(id)
   }
   exports.dependents = dependents
 
