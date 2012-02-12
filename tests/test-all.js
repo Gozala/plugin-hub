@@ -88,7 +88,7 @@ exports['test unplug unplugs dependents'] = function(assert) {
 
 exports['test for hooks'] = function(assert) {
   var a = {
-    name: 'Ga6',
+    name: 'a6',
     onplug: function(event) {
       a.plugs.push(event)
     },
@@ -123,7 +123,7 @@ exports['test for hooks'] = function(assert) {
     type: 'plug',
     plugin: a,
     plugins: [ a ]
-  }], 'event was signaled')
+  }], 'event was signaled on a')
 
   hub.plug(b)
 
@@ -131,7 +131,7 @@ exports['test for hooks'] = function(assert) {
     type: 'plug',
     plugin: b,
     plugins: [ a, b ]
-  }], 'second event was signaled')
+  }], 'second event was signaled on b')
 
 
   assert.deepEqual(a.plugs, [{
@@ -142,7 +142,7 @@ exports['test for hooks'] = function(assert) {
     type: 'plug',
     plugin: b,
     plugins: [ a, b ]
-  }], 'second event was signaled')
+  }], 'second event was signaled on a')
 
   hub.plug(c)
 
@@ -160,7 +160,7 @@ exports['test for hooks'] = function(assert) {
     type: 'plug',
     plugin: c,
     plugins: [ a, b, c ]
-  }], 'third event was signaled')
+  }], 'third event was signaled on a')
 
   assert.deepEqual(b.plugs, [{
     type: 'plug',
@@ -171,11 +171,52 @@ exports['test for hooks'] = function(assert) {
     type: 'plug',
     plugin: c,
     plugins: [ a, b, c ]
-  }], 'third event was signaled')
+  }], 'third event was signaled on b')
 
   hub.uninstall('a6@0.0.0')
+
+  assert.deepEqual(a.unplugs, [{
+    type: 'unplug',
+    plugin: a
+  }], 'first unplug event was signaled on a')
+
+  assert.deepEqual(b.unplugs, [{
+    type: 'unplug',
+    plugin: a
+  }], 'first unplug event was signaled on b')
+
+  hub.unplug('b6@0.0.0')
+
+  assert.deepEqual(a.unplugs, [{
+    type: 'unplug',
+    plugin: a
+  }], 'unplugged plugin does not gets signal')
+
+  assert.deepEqual(b.unplugs, [{
+    type: 'unplug',
+    plugin: a
+  },
+  {
+    type: 'unplug',
+    plugin: b
+  }], 'second unplug event was signaled')
+
   hub.uninstall('b6@0.0.0')
   hub.uninstall('c6@0.0.0')
+
+  assert.deepEqual(a.unplugs, [{
+    type: 'unplug',
+    plugin: a
+  }], 'unplugged plugin is not signaled')
+
+  assert.deepEqual(b.unplugs, [{
+    type: 'unplug',
+    plugin: a
+  },
+  {
+    type: 'unplug',
+    plugin: b
+  }], 'second unplugged plugin is not signaled')
 }
 
 if (module == require.main)
