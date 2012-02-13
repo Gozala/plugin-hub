@@ -78,16 +78,21 @@
 
   var signal = meta({
     description: 'signal all dependencies'
-  }, function signal(env, address, message) {
-    var hook = 'on' + address
-    message.type = address
-    message.env = env
-    return values(plugged(env)).
-    map(function(plugin) {
-      return typeof(plugin[hook]) === 'function' && plugin[hook](message)
-    })
+  }, function signal(env, plugin, address, event) {
+    var type = 'on' + address
+    event.type = address
+    event.env = env
+    return typeof(plugin[type]) === 'function' && plugin[type](event)
   })
   exports.signal = signal
+
+  var broadcast = meta({
+    description: 'breadcast to all enabled plugins'
+  }, function broadcast(env, address, event) {
+    return values(plugged(env)).map(function(plugin) {
+      signal(env, plugin, address, event)
+    })
+  })
 
   var install = meta({
     description: 'installs a given plugin'
@@ -122,10 +127,7 @@
     // If all dependencies are plugged in, then plug given one as well &
     // signal all plugins.
     plugged(env)[id(plugin)] = plugin
-    signal(env, 'plug', {
-      plugin: plugin,
-      plugins: values(plugged(env))
-    })
+    broadcast(env, 'plug', { plugin: plugin, plugins: values(plugged(env)) })
   })
   exports.plug = plug
 
@@ -138,7 +140,7 @@
       // unplug all the dependent plugins.
       dependents(env, plugin).map(function(plugin) { unplug(env, plugin) })
       // signal that plugin was unplugged.
-      signal(env, 'unplug', { plugin: plugin })
+      broadcast(env, 'unplug', { plugin: plugin })
       // remove plugin from registry.
       delete plugged(env)[id]
       result = true
