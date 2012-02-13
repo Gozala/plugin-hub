@@ -20,73 +20,91 @@ exports['test id generation'] = function(assert) {
 }
 
 exports['test install'] = function(assert) {
-  assert.ok(hub.install({ name: 'a2', no: 1 }), 'install returns true')
-  assert.ok(hub.install({ name: 'b2', version: '0.1.0' }), 'install succeeds')
-  assert.ok(!hub.install({ name: 'a2' }), 'plugin was not installed')
+  var env = {}
+  hub.plug(env, hub)
 
-  assert.ok(hub.isInstalled('a2@0.0.0'), 'plugin is installed')
-  assert.ok(hub.isInstalled('b2@0.1.0'), 'plugin is installed')
+  assert.ok(hub.install(env, { name: 'a2', no: 1 }),
+                        'install returns true')
+  assert.ok(hub.install(env, { name: 'b2', version: '0.1.0' }),
+                        'install succeeds')
+  assert.ok(!hub.install(env, { name: 'a2' }),
+                         'plugin was not installed')
 
-  hub.uninstall('a2@0.0.0')
-  hub.uninstall('b2@0.1.0')
+  assert.ok(hub.isInstalled(env, 'a2@0.0.0'), 'plugin is installed')
+  assert.ok(hub.isInstalled(env, 'b2@0.1.0'), 'plugin is installed')
+
+  hub.uninstall(env, 'a2@0.0.0')
+  hub.uninstall(env, 'b2@0.1.0')
 }
 
 exports['test plug'] = function(assert) {
+  var env = {}
+  hub.plug({}, hub)
+
   var a = { name: 'a3', version: '0.0.1' }
   var b = { name: 'b3', version: '0.2.1', dependencies: [ 'a3@0.0.1' ] }
   var c = { name: 'c3', dependencies: [ 'a3@0.0.1', 'b3@0.2.1' ] }
 
-  hub.install(a)
-  hub.install(b)
-  hub.plug(c)
+  hub.install(env, a)
+  hub.install(env, b)
+  hub.plug(env, c)
 
-  assert.ok(hub.isPlugged(hub.id(a)), 'dependent plugin was plugged')
-  assert.ok(hub.isPlugged(hub.id(b)), 'dependent plugin was plugged')
-  assert.ok(hub.isPlugged(hub.id(c)), 'all dependecies are plugged')
+  assert.ok(hub.isPlugged(env, hub.id(a)), 'dependent plugin was plugged')
+  assert.ok(hub.isPlugged(env, hub.id(b)), 'dependent plugin was plugged')
+  assert.ok(hub.isPlugged(env, hub.id(c)), 'all dependecies are plugged')
 
-  hub.uninstall('a3@0.0.1')
-  hub.uninstall('b3@0.2.1')
-  hub.uninstall('c3@0.0.0')
+  hub.uninstall(env, 'a3@0.0.1')
+  hub.uninstall(env, 'b3@0.2.1')
+  hub.uninstall(env, 'c3@0.0.0')
 }
 
 exports['test plug unmet dependency'] = function(assert) {
+  var env = {}
+  hub.plug({}, hub)
+
   var d = { name: 'd4', version: '0.1.0', dependencies: [ 'e4@0.0.1' ] }
   var e = { name: 'e4', version: '0.0.1' }
 
   assert.throws(function() {
-    hub.plug(d)
+    hub.plug(env, d)
   }, /e4@0.0.1/, 'throws on unmet dependecy')
 
-  hub.install(e)
-  hub.plug(d)
+  hub.install(env, e)
+  hub.plug(env, d)
 
-  assert.ok(hub.isPlugged('e4@0.0.1'), 'dependency was plugged')
-  assert.ok(hub.isPlugged('d4@0.1.0'), 'plugin was installed')
+  assert.ok(hub.isPlugged(env, 'e4@0.0.1'), 'dependency was plugged')
+  assert.ok(hub.isPlugged(env, 'd4@0.1.0'), 'plugin was installed')
 
-  hub.uninstall('e4@0.0.1')
-  hub.uninstall('d4@0.1.0')
+  hub.uninstall(env, 'e4@0.0.1')
+  hub.uninstall(env, 'd4@0.1.0')
 }
 
 exports['test unplug unplugs dependents'] = function(assert) {
+  var env = {}
+  hub.plug(env, hub)
+
   var a = { name: 'a5', dependencies: [ 'b5@0.0.0' ] }
   var b = { name: 'b5' }
 
-  hub.install(b)
-  hub.plug(a)
+  hub.install(env, b)
+  hub.plug(env, a)
 
-  assert.ok(hub.isPlugged('b5@0.0.0'), 'dependency is plugged')
-  assert.ok(hub.isPlugged('a5@0.0.0'), 'all plugins are plugged')
+  assert.ok(hub.isPlugged(env, 'b5@0.0.0'), 'dependency is plugged')
+  assert.ok(hub.isPlugged(env, 'a5@0.0.0'), 'all plugins are plugged')
 
-  hub.unplug('b5@0.0.0')
+  hub.unplug(env, 'b5@0.0.0')
 
-  assert.ok(!hub.isPlugged('b5@0.0.0'), 'dependency is unplugged')
-  assert.ok(!hub.isPlugged('a5@0.0.0'), 'all plugins are unplugged')
+  assert.ok(!hub.isPlugged(env, 'b5@0.0.0'), 'dependency is unplugged')
+  assert.ok(!hub.isPlugged(env, 'a5@0.0.0'), 'all plugins are unplugged')
 
-  hub.uninstall('b5@0.0.0')
-  hub.uninstall('a5@0.0.0')
+  hub.uninstall(env, 'b5@0.0.0')
+  hub.uninstall(env, 'a5@0.0.0')
 }
 
 exports['test for hooks'] = function(assert) {
+  var env = {}
+  hub.plug({}, hub)
+
   var a = {
     name: 'a6',
     onplug: function(event) {
@@ -113,22 +131,24 @@ exports['test for hooks'] = function(assert) {
 
   var c = { name: 'c6' }
 
-  hub.install(a)
-  hub.install(b)
-  hub.install(c)
+  hub.install(env, a)
+  hub.install(env, b)
+  hub.install(env, c)
 
-  hub.plug(a)
+  hub.plug(env, a)
 
   assert.deepEqual(a.plugs, [{
     type: 'plug',
+    env: env,
     plugin: a,
     plugins: [ a ]
   }], 'event was signaled on a')
 
-  hub.plug(b)
+  hub.plug(env, b)
 
   assert.deepEqual(b.plugs, [{
     type: 'plug',
+    env: env,
     plugin: b,
     plugins: [ a, b ]
   }], 'second event was signaled on b')
@@ -136,85 +156,100 @@ exports['test for hooks'] = function(assert) {
 
   assert.deepEqual(a.plugs, [{
     type: 'plug',
+    env: env,
     plugin: a,
     plugins: [ a ]
   }, {
     type: 'plug',
+    env: env,
     plugin: b,
     plugins: [ a, b ]
   }], 'second event was signaled on a')
 
-  hub.plug(c)
+  hub.plug(env, c)
 
   assert.deepEqual(a.plugs, [{
     type: 'plug',
+    env: env,
     plugin: a,
     plugins: [ a ]
   },
   {
     type: 'plug',
+    env: env,
     plugin: b,
     plugins: [ a, b ]
   },
   {
     type: 'plug',
+    env: env,
     plugin: c,
     plugins: [ a, b, c ]
   }], 'third event was signaled on a')
 
   assert.deepEqual(b.plugs, [{
     type: 'plug',
+    env: env,
     plugin: b,
     plugins: [ a, b ]
   },
   {
     type: 'plug',
+    env: env,
     plugin: c,
     plugins: [ a, b, c ]
   }], 'third event was signaled on b')
 
-  hub.uninstall('a6@0.0.0')
+  hub.uninstall(env, 'a6@0.0.0')
 
   assert.deepEqual(a.unplugs, [{
     type: 'unplug',
+    env: env,
     plugin: a
   }], 'first unplug event was signaled on a')
 
   assert.deepEqual(b.unplugs, [{
     type: 'unplug',
+    env: env,
     plugin: a
   }], 'first unplug event was signaled on b')
 
-  hub.unplug('b6@0.0.0')
+  hub.unplug(env, 'b6@0.0.0')
 
   assert.deepEqual(a.unplugs, [{
     type: 'unplug',
+    env: env,
     plugin: a
   }], 'unplugged plugin does not gets signal')
 
   assert.deepEqual(b.unplugs, [{
     type: 'unplug',
+    env: env,
     plugin: a
   },
   {
     type: 'unplug',
+    env: env,
     plugin: b
   }], 'second unplug event was signaled')
 
-  hub.uninstall('b6@0.0.0')
-  hub.uninstall('c6@0.0.0')
+  hub.uninstall(env, 'b6@0.0.0')
+  hub.uninstall(env, 'c6@0.0.0')
 
   assert.deepEqual(a.unplugs, [{
     type: 'unplug',
+    env: env,
     plugin: a
   }], 'unplugged plugin is not signaled')
 
   assert.deepEqual(b.unplugs, [{
     type: 'unplug',
+    env: env,
     plugin: a
   },
   {
     type: 'unplug',
+    env: env,
     plugin: b
   }], 'second unplugged plugin is not signaled')
 }

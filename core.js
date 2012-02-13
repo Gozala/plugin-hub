@@ -8,10 +8,25 @@
   exports.description = 'plugin manager'
   exports.stability = 'unstable'
 
-  var installed = Object.create(null)
+  function values(object) {
+    return Object.keys(object).map(function(key) { return object[key] })
+  }
+  function meta(metadata, value) {
+    value.meta = typeof(metadata) === 'string' ? { description: metadata }
+                                               : metadata
+    return value
+  }
+
+  function installed(env) {
+    var plugins = env.plugins || (env.plugins = {})
+    return plugins.installed || (plugins.installed = Object.create(null))
+  }
   exports.installed = installed
 
-  var plugged = Object.create(null)
+  function plugged(env) {
+    var plugins = env.plugins || (env.plugins = {})
+    return plugins.plugged || (plugins.plugged = Object.create(null))
+  }
   exports.plugged = plugged
 
   function id(plugin) {
@@ -26,16 +41,15 @@
     /**
     returns array of dependencies for this plugin.
     **/
-    return plugin.dependencies || []
+    return Array.isArray(plugin.dependencies) ? plugin.dependencies : []
   }
   exports.dependencies = dependencies
 
-  function dependents(plugin) {
+  function dependents(env, plugin) {
     /**
     returns array of dependent plugins for a given one.
     **/
-    return Object.keys(installed).
-    map(dependency).
+    return values(installed(env)).
     filter(function(dependency) {
       return ~dependencies(dependency).indexOf(id(plugin))
     }).
@@ -43,95 +57,94 @@
   }
   exports.dependents = dependents
 
-  function dependency(id) {
-    return installed[id]
+  function dependency(env, id) {
+    return installed(env)[id]
   }
   exports.dependency = dependency
 
-  function isInstalled(id) {
-    return id in installed
-  }
-  isInstalled.meta = { description: 'returns true if plugin is istalled' }
+  var isInstalled = meta({
+    description: 'returns true if plugin is istalled into given env'
+  }, function isInstalled(env, id) {
+    return id in installed(env)
+  })
   exports.isInstalled = isInstalled
 
-  function isPlugged(id) {
-    return id in plugged
-  }
-  isPlugged.meta = { description: 'return true if plugin is plugged' }
+  var isPlugged = meta({
+    description: 'return true if plugin is plugged into given env'
+  }, function isPlugged(env, id) {
+    return id in plugged(env)
+  })
   exports.isPlugged = isPlugged
 
-  function isPluggable(plugin) {
-    /**
-    checks weather all the dependencies of the plugin are installed.
-    **/
-    return dependencies(plugin).every(isInstalled)
-  }
-  exports.isPluggable = isPluggable
-
-  function signal(address, message) {
+  var signal = meta({
+    description: 'signal all dependencies'
+  }, function signal(env, address, message) {
     var hook = 'on' + address
     message.type = address
-    return Object.keys(plugged).
-    map(function(id) { return plugged[id] }).
+    message.env = env
+    return values(plugged(env)).
     map(function(plugin) {
       return typeof(plugin[hook]) === 'function' && plugin[hook](message)
     })
-  }
-  signal.meta = { description: 'signal all dependencies' }
+  })
   exports.signal = signal
 
-  function install(plugin) {
+  var install = meta({
+    description: 'installs a given plugin'
+  }, function install(env, plugin) {
     // If plugin is not installed yet install it.
-    return !isInstalled(id(plugin)) && (installed[id(plugin)] = plugin)
-  }
-  install.meta = { description: 'installs a given plugin' }
+    return !isInstalled(env, id(plugin)) &&
+            (installed(env)[id(plugin)] = plugin)
+  })
   exports.install = install
 
-  function uninstall(id) {
-    unplug(id)
+  var uninstall = meta({
+    description: 'uninstalls plugin with given id from given env'
+  }, function uninstall(env, id) {
+    unplug(env, id)
     // If plugin is installed then uninstall.
-    return isInstalled(id) && delete installed[id]
-  }
-  uninstall.meta = { description: 'uninstalls a given plugin' }
+    return isInstalled(env, id) && delete installed(env)[id]
+  })
   exports.uninstall = uninstall
 
-  function plug(plugin) {
+  var plug = meta({
+    description: 'enables given plugin in the given env'
+  }, function plug(env, plugin) {
     // If plugin is not installed, then install it first.
-    if (!isInstalled(id(plugin))) install(plugin)
+    if (!isInstalled(env, id(plugin))) install(env, plugin)
 
     // Goes through all dependencies and try to plug them in.
     dependencies(plugin).forEach(function(id) {
-      if (isInstalled(id)) plug(dependency(id))
+      if (isInstalled(env, id)) plug(env, dependency(env, id))
       else throw Error('Unmet dependency: ' + id)
     })
 
     // If all dependencies are plugged in, then plug given one as well &
     // signal all plugins.
-    plugged[id(plugin)] = plugin
-    signal('plug', {
+    plugged(env)[id(plugin)] = plugin
+    signal(env, 'plug', {
       plugin: plugin,
-      plugins: Object.keys(plugged).map(dependency)
+      plugins: values(plugged(env))
     })
-  }
-  plug.meta = { description: 'enables a given plugin' }
+  })
   exports.plug = plug
 
-  function unplug(id) {
+  var unplug = meta({
+    description: 'disables plugin with a given id in the given env'
+  }, function unplug(env, id) {
     var plugin, result = false
-    if (isPlugged(id)) {
-      plugin = plugged[id]
+    if (isPlugged(env, id)) {
+      plugin = plugged(env)[id]
       // unplug all the dependent plugins.
-      dependents(plugin).map(unplug)
+      dependents(env, plugin).map(function(plugin) { unplug(env, plugin) })
       // signal that plugin was unplugged.
-      signal('unplug', { plugin: plugin })
+      signal(env, 'unplug', { plugin: plugin })
       // remove plugin from registry.
-      delete plugged[id]
+      delete plugged(env)[id]
       result = true
     }
 
     return result
-  }
-  plug.meta = { description: 'disables a given plugin' }
+  })
   exports.unplug = unplug
-
 });
