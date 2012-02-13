@@ -163,18 +163,14 @@
   var onplug = meta({
     description: 'hook that signals plugin that it is started'
   }, function onplug(event) {
-    var plugin = event.plugin
-    return typeof(plugin[events.startup]) === 'function' &&
-           plugin[events.startup](event)
+    signal(event.env, event.plugin, events.startup, event)
   })
   exports.onplug = onplug
 
   var onunplug = meta({
     description: 'hook that signals plugin that it is shutted down'
   }, function onplug(event) {
-    var plugin = event.plugin
-    return typeof(plugin[events.shutdown]) === 'function' &&
-           plugin[events.shutdown](event)
+    signal(event.env, event.env.plugin, events.shutdown, event)
   })
   exports.onunplug = onunplug
 });
