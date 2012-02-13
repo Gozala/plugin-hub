@@ -17,6 +17,13 @@
     return value
   }
 
+  var events = meta('Events triggered by this plugin', {})
+  events.plug = 'plug'
+  events.unplug = 'unplug'
+  events.startup = 'startup'
+  events.shutdown = 'shutdown'
+  exports.events = events
+
   function installed(env) {
     var plugins = env.plugins || (env.plugins = {})
     return plugins.installed || (plugins.installed = Object.create(null))
@@ -127,7 +134,10 @@
     // If all dependencies are plugged in, then plug given one as well &
     // signal all plugins.
     plugged(env)[id(plugin)] = plugin
-    broadcast(env, 'plug', { plugin: plugin, plugins: values(plugged(env)) })
+    broadcast(env, events.plug, {
+      plugin: plugin,
+      plugins: values(plugged(env))
+    })
   })
   exports.plug = plug
 
@@ -140,7 +150,7 @@
       // unplug all the dependent plugins.
       dependents(env, plugin).map(function(plugin) { unplug(env, plugin) })
       // signal that plugin was unplugged.
-      broadcast(env, 'unplug', { plugin: plugin })
+      broadcast(env, events.unplug, { plugin: plugin })
       // remove plugin from registry.
       delete plugged(env)[id]
       result = true
@@ -149,4 +159,22 @@
     return result
   })
   exports.unplug = unplug
+
+  var onplug = meta({
+    description: 'hook that signals plugin that it is started'
+  }, function onplug(event) {
+    var plugin = event.plugin
+    return typeof(plugin[events.startup]) === 'function' &&
+           plugin[events.startup](event)
+  })
+  exports.onplug = onplug
+
+  var onunplug = meta({
+    description: 'hook that signals plugin that it is shutted down'
+  }, function onplug(event) {
+    var plugin = event.plugin
+    return typeof(plugin[events.shutdown]) === 'function' &&
+           plugin[events.shutdown](event)
+  })
+  exports.onunplug = onunplug
 });
