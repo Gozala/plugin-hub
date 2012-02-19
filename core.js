@@ -3,19 +3,31 @@
   'use strict';
 
   exports.name = 'hub'
-  exports.version = '0.0.1'
+  exports.version = '0.0.2'
   exports.author = 'Irakli Gozalishvili <rfobic@gmail.com>'
   exports.description = 'plugin manager'
   exports.stability = 'unstable'
 
+  var unbind = Function.call.bind(Function.bind, Function.call)
+  var slice = unbind(Array.prototype.slice)
+  var join = Function.apply.bind(Array.prototype.concat)
+
   function values(object) {
     return Object.keys(object).map(function(key) { return object[key] })
   }
-  function meta(metadata, value) {
-    value.meta = typeof(metadata) === 'string' ? { description: metadata }
-                                               : metadata
-    return value
+  exports.values = values
+
+  function meta(data, target) {
+    return Object.defineProperties(target, {
+      meta: {
+        enumerable: false,
+        writable: false,
+        configurable: true,
+        value: typeof(data) === 'string' ? { description: data } : data
+      }
+    })
   }
+  exports.meta = meta
 
   var events = meta('Events triggered by this plugin', {})
   events.plug = 'plug'
@@ -85,21 +97,22 @@
 
   var signal = meta({
     description: 'signal all dependencies'
-  }, function signal(env, plugin, address, event) {
+  }, function signal(plugin, address) {
     var type = 'on' + address
-    event.type = address
-    event.env = env
-    return typeof(plugin[type]) === 'function' && plugin[type](event)
+    var f = plugin[type]
+    return typeof(f) === 'function' && f.apply(f, slice(arguments, 2))
   })
   exports.signal = signal
 
   var broadcast = meta({
     description: 'breadcast to all enabled plugins'
-  }, function broadcast(env, address, event) {
+  }, function broadcast(env, address) {
+    var args = slice(arguments, 2)
     return values(plugged(env)).map(function(plugin) {
-      signal(env, plugin, address, event)
+      signal.apply(signal, join([ plugin, address, env ], args))
     })
   })
+  exports.broadcast = broadcast
 
   var install = meta({
     description: 'installs a given plugin'
@@ -134,10 +147,7 @@
     // If all dependencies are plugged in, then plug given one as well &
     // signal all plugins.
     plugged(env)[id(plugin)] = plugin
-    broadcast(env, events.plug, {
-      plugin: plugin,
-      plugins: values(plugged(env))
-    })
+    broadcast(env, events.plug, plugin)
   })
   exports.plug = plug
 
@@ -150,7 +160,7 @@
       // unplug all the dependent plugins.
       dependents(env, plugin).map(function(plugin) { unplug(env, plugin) })
       // signal that plugin was unplugged.
-      broadcast(env, events.unplug, { plugin: plugin })
+      broadcast(env, events.unplug, plugin)
       // remove plugin from registry.
       delete plugged(env)[id]
       result = true
@@ -160,17 +170,22 @@
   })
   exports.unplug = unplug
 
-  var onplug = meta({
-    description: 'hook that signals plugin that it is started'
-  }, function onplug(event) {
-    signal(event.env, event.plugin, events.startup, event)
-  })
-  exports.onplug = onplug
+  exports.onstartup = function onstartup(env) {
+    env.broadcast = broadcast.bind(null, env)
+  }
+  exports.onshutdown = function onshutdown(env) {
+    delete env.broadcast
+  }
 
-  var onunplug = meta({
-    description: 'hook that signals plugin that it is shutted down'
-  }, function onplug(event) {
-    signal(event.env, event.env.plugin, events.shutdown, event)
+  exports.onplug = meta({
+    description: 'hook that signals plugin that it is started'
+  }, function onplug(env, plugin) {
+    signal(plugin, events.startup, env, plugin, values(plugged(env)))
   })
-  exports.onunplug = onunplug
+
+  exports.onunplug = meta({
+    description: 'hook that signals plugin that it is shutted down'
+  }, function onplug(env, plugin) {
+    signal(plugin, events.shutdown, env, plugin)
+  })
 });

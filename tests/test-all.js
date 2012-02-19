@@ -107,11 +107,11 @@ exports['test for hooks'] = function(assert) {
 
   var a = {
     name: 'a6',
-    onplug: function(event) {
-      a.plugs.push(event)
+    onplug: function(env, plugin) {
+      a.plugs.push([ env, plugin ])
     },
-    onunplug: function(event) {
-      a.unplugs.push(event)
+    onunplug: function(env, plugin) {
+      a.unplugs.push([ env, plugin ])
     },
     plugs: [],
     unplugs: []
@@ -119,11 +119,11 @@ exports['test for hooks'] = function(assert) {
 
   var b = {
     name: 'b6',
-    onplug: function (event) {
-      b.plugs.push(event)
+    onplug: function (env, plugin) {
+      b.plugs.push([ env, plugin ])
     },
-    onunplug: function(event) {
-      b.unplugs.push(event)
+    onunplug: function(env, plugin) {
+      b.unplugs.push([ env, plugin ])
     },
     plugs: [],
     unplugs: []
@@ -137,121 +137,62 @@ exports['test for hooks'] = function(assert) {
 
   hub.plug(env, a)
 
-  assert.deepEqual(a.plugs, [{
-    type: 'plug',
-    env: env,
-    plugin: a,
-    plugins: [ a ]
-  }], 'event was signaled on a')
+  assert.deepEqual(a.plugs, [[ env, a ]], 'event was signaled on a')
+
 
   hub.plug(env, b)
 
-  assert.deepEqual(b.plugs, [{
-    type: 'plug',
-    env: env,
-    plugin: b,
-    plugins: [ a, b ]
-  }], 'second event was signaled on b')
+  assert.deepEqual(b.plugs, [[ env, b ]], 'second event was signaled on b')
 
 
-  assert.deepEqual(a.plugs, [{
-    type: 'plug',
-    env: env,
-    plugin: a,
-    plugins: [ a ]
-  }, {
-    type: 'plug',
-    env: env,
-    plugin: b,
-    plugins: [ a, b ]
-  }], 'second event was signaled on a')
+  assert.deepEqual(a.plugs, [[ env, a ], [ env, b ]],
+                   'second event was signaled on a')
 
   hub.plug(env, c)
 
-  assert.deepEqual(a.plugs, [{
-    type: 'plug',
-    env: env,
-    plugin: a,
-    plugins: [ a ]
-  },
-  {
-    type: 'plug',
-    env: env,
-    plugin: b,
-    plugins: [ a, b ]
-  },
-  {
-    type: 'plug',
-    env: env,
-    plugin: c,
-    plugins: [ a, b, c ]
-  }], 'third event was signaled on a')
+  assert.deepEqual(a.plugs, [
+    [ env, a ],
+    [ env, b ],
+    [ env, c ]
+  ], 'third event was signaled on a')
 
-  assert.deepEqual(b.plugs, [{
-    type: 'plug',
-    env: env,
-    plugin: b,
-    plugins: [ a, b ]
-  },
-  {
-    type: 'plug',
-    env: env,
-    plugin: c,
-    plugins: [ a, b, c ]
-  }], 'third event was signaled on b')
+  assert.deepEqual(b.plugs, [
+    [ env, b ],
+    [ env, c ]
+  ], 'third event was signaled on b')
 
   hub.uninstall(env, 'a6@0.0.0')
 
-  assert.deepEqual(a.unplugs, [{
-    type: 'unplug',
-    env: env,
-    plugin: a
-  }], 'first unplug event was signaled on a')
+  assert.deepEqual(a.unplugs, [
+    [ env, a ]
+  ], 'first unplug event was signaled on a')
 
-  assert.deepEqual(b.unplugs, [{
-    type: 'unplug',
-    env: env,
-    plugin: a
-  }], 'first unplug event was signaled on b')
+  assert.deepEqual(b.unplugs, [
+    [ env, a ]
+  ], 'first unplug event was signaled on b')
 
   hub.unplug(env, 'b6@0.0.0')
 
-  assert.deepEqual(a.unplugs, [{
-    type: 'unplug',
-    env: env,
-    plugin: a
-  }], 'unplugged plugin does not gets signal')
+  assert.deepEqual(a.unplugs, [
+    [ env, a ]
+  ], 'unplugged plugin does not gets signal')
 
-  assert.deepEqual(b.unplugs, [{
-    type: 'unplug',
-    env: env,
-    plugin: a
-  },
-  {
-    type: 'unplug',
-    env: env,
-    plugin: b
-  }], 'second unplug event was signaled')
+  assert.deepEqual(b.unplugs, [
+    [ env, a ],
+    [ env, b ]
+  ], 'second unplug event was signaled')
 
   hub.uninstall(env, 'b6@0.0.0')
   hub.uninstall(env, 'c6@0.0.0')
 
-  assert.deepEqual(a.unplugs, [{
-    type: 'unplug',
-    env: env,
-    plugin: a
-  }], 'unplugged plugin is not signaled')
+  assert.deepEqual(a.unplugs, [
+    [ env, a ]
+  ], 'unplugged plugin is not signaled')
 
-  assert.deepEqual(b.unplugs, [{
-    type: 'unplug',
-    env: env,
-    plugin: a
-  },
-  {
-    type: 'unplug',
-    env: env,
-    plugin: b
-  }], 'second unplugged plugin is not signaled')
+  assert.deepEqual(b.unplugs, [
+    [ env, a ],
+    [ env, b ]
+  ], 'second unplugged plugin is not signaled')
 }
 
 if (module == require.main)
