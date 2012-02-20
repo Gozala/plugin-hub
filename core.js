@@ -180,12 +180,12 @@
   exports.onplug = meta({
     description: 'hook that signals plugin that it is started'
   }, function onplug(env, plugin) {
-    signal(plugin, events.startup, env, plugin, values(plugged(env)))
+    signal(plugin, events.startup, env, values(plugged(env)))
   })
 
   exports.onunplug = meta({
     description: 'hook that signals plugin that it is shutted down'
   }, function onplug(env, plugin) {
-    signal(plugin, events.shutdown, env, plugin)
+    signal(plugin, events.shutdown, env)
   })
 });
